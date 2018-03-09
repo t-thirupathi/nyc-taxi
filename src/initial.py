@@ -22,8 +22,8 @@ test['pickup_datetime'] = test['pickup_datetime'].apply(lambda x: datetime.strpt
 # In[92]:
 
 
-#train = train.head(10000)
-#test = test.head(10000)
+train = train.head(1000)
+test = test.head(1000)
 
 
 # In[93]:
@@ -55,7 +55,7 @@ test['hour_of_day_sine'] = test['hour_of_day'].apply(hour_of_day_sine)
 
 
 def distance(pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude):
-    return (dropoff_latitude - pickup_latitude) ** 2 + (dropoff_longitude - pickup_longitude) ** 2
+    return np.sqrt((dropoff_latitude - pickup_latitude) ** 2 + (dropoff_longitude - pickup_longitude) ** 2)
 
 train['distance'] = train.apply(lambda x: distance(x['pickup_latitude'], x['pickup_longitude'], x['dropoff_latitude'], x['dropoff_longitude']), axis=1)
 test['distance'] = test.apply(lambda x: distance(x['pickup_latitude'], x['pickup_longitude'], x['dropoff_latitude'], x['dropoff_longitude']), axis=1)
@@ -65,7 +65,7 @@ test['distance'] = test.apply(lambda x: distance(x['pickup_latitude'], x['pickup
 
 
 train_tmp = train[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine', 'trip_duration']]
-train_tmp.corr()
+print train_tmp.corr()
 
 
 # In[100]:
