@@ -55,7 +55,7 @@ x_test = test[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', '
 # Since number of data points is huge, 
 # use linear regression model with low tolerance, and saga solver
 # otherwise it takes to months to train. 
-model = LogisticRegression(tol=0.1, solver='saga')
+model = LogisticRegression(tol=0.1, solver='saga', n_jobs=4)
 model.fit(x_train, y_train)
 
 test['trip_duration'] = model.predict(x_test)
