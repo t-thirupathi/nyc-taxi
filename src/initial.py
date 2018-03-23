@@ -9,6 +9,26 @@ test = pd.read_csv('../input/test.csv')
 # Train on lower number of points if running on laptop
 #train = train.head(30000)
 
+# Remove passenger count outliers
+train = train[train['passenger_count'] > 0]
+train = train[train['passenger_count'] < 9]
+
+# Remove coordinate outliers
+train = train[train['pickup_longitude'] <= -73.75]
+train = train[train['pickup_longitude'] >= -74.03]
+train = train[train['pickup_latitude'] <= 40.85]
+train = train[train['pickup_latitude'] >= 40.63]
+train = train[train['dropoff_longitude'] <= -73.75]
+train = train[train['dropoff_longitude'] >= -74.03]
+train = train[train['dropoff_latitude'] <= 40.85]
+train = train[train['dropoff_latitude'] >= 40.63]
+
+# Remove trip_duration outliers
+trip_duration_mean = np.mean(train['trip_duration'])
+trip_duration_std = np.std(train['trip_duration'])
+train = train[train['trip_duration'] <= trip_duration_mean + 2 * trip_duration_std]
+train = train[train['trip_duration'] >= trip_duration_mean - 2 * trip_duration_std]
+
 # Convert to datetime object to easily extract hour of day, day of week
 train['pickup_datetime_object'] = pd.to_datetime(train['pickup_datetime'])
 test['pickup_datetime_object'] = pd.to_datetime(test['pickup_datetime'])
@@ -48,17 +68,19 @@ test['distance'] = np.sqrt(np.square(test['dist_long']) + np.square(test['dist_l
 print(train.corr())
 
 # Select only few variables as input, based on correlation analysis
-x_train = train[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine']]
-y_train = train['trip_duration']
-x_test = test[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine']]
+train_x = train[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine']]
+train_x = train[['passenger_count', 'vendor_id', 'distance']] # Remove temporarily to reduce number of variables
+train_y = train['trip_duration']
+test_x = test[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine']]
+test_x = test[['passenger_count', 'vendor_id', 'distance']] # Remove temporarily to reduce number of variables
 
 # Since number of data points is huge, 
 # use linear regression model with low tolerance, and saga solver
 # otherwise it takes to months to train. 
 model = LogisticRegression(tol=0.1, solver='saga', n_jobs=4)
-model.fit(x_train, y_train)
+model.fit(train_x, train_y)
 
-test['trip_duration'] = model.predict(x_test)
+test['trip_duration'] = model.predict(test_x)
 
 # We need to submit only the id and predicted trip duration
 test[['id', 'trip_duration']].to_csv('submission.csv', index=False)
