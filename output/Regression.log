@@ -1,0 +1,2 @@
+DEBUG:root:This log captures the time taken to train logistic regression for a million data points, 32 jobs
+INFO:root:The time taken to train Logistic Regression model is : 161941.772247

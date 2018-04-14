@@ -2,12 +2,14 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
+from haversine import haversine
 
 train = pd.read_csv('../input/train.csv')
 test = pd.read_csv('../input/test.csv')
 
 # Train on lower number of points if running on laptop
-#train = train.head(30000)
+#train = train.head(300000)
 
 # Remove passenger count outliers
 train = train[train['passenger_count'] > 0]
@@ -26,8 +28,8 @@ train = train[train['dropoff_latitude'] >= 40.63]
 # Remove trip_duration outliers
 trip_duration_mean = np.mean(train['trip_duration'])
 trip_duration_std = np.std(train['trip_duration'])
-train = train[train['trip_duration'] <= trip_duration_mean + 2 * trip_duration_std]
-train = train[train['trip_duration'] >= trip_duration_mean - 2 * trip_duration_std]
+train = train[train['trip_duration'] <= trip_duration_mean + 3 * trip_duration_std]
+train = train[train['trip_duration'] >= trip_duration_mean - 3 * trip_duration_std]
 
 # Convert to datetime object to easily extract hour of day, day of week
 train['pickup_datetime_object'] = pd.to_datetime(train['pickup_datetime'])
@@ -61,24 +63,29 @@ test['dist_long'] = test['pickup_longitude'] - test['dropoff_longitude']
 train['dist_lat'] = train['pickup_latitude'] - train['dropoff_latitude']
 test['dist_lat'] = test['pickup_latitude'] - test['dropoff_latitude']
 
-train['distance'] = np.sqrt(np.square(train['dist_long']) + np.square(train['dist_lat']))
-test['distance'] = np.sqrt(np.square(test['dist_long']) + np.square(test['dist_lat']))
+train['distance'] = np.sqrt(np.square(train['dist_long']) + np.square(train['dist_lat'])) * 10000
+train['distance'] = np.round(train['distance'])
+test['distance'] = np.sqrt(np.square(test['dist_long']) + np.square(test['dist_lat'])) * 10000
+test['distance'] = np.round(test['distance'])
+#train['distance_haver'] = train.apply(lambda x: haversine((x["pickup_longitude"], x["pickup_latitude"]), (x["dropoff_longitude"], x["dropoff_latitude"])), axis=1)
+#test['distance_haver'] = test.apply(lambda x: haversine((x["pickup_longitude"], x["pickup_latitude"]), (x["dropoff_longitude"], x["dropoff_latitude"])), axis=1)
+
 
 # View the correlation between each other variables
 print(train.corr())
 
 # Select only few variables as input, based on correlation analysis
-train_x = train[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine']]
-train_x = train[['passenger_count', 'vendor_id', 'distance']] # Remove temporarily to reduce number of variables
+train_x = train[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine', 'dist_long', 'dist_lat']]
 train_y = train['trip_duration']
-test_x = test[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine']]
-test_x = test[['passenger_count', 'vendor_id', 'distance']] # Remove temporarily to reduce number of variables
+test_x = test[['passenger_count', 'vendor_id', 'distance', 'day_of_week_sine', 'hour_of_day_sine', 'dist_long', 'dist_lat']]
 
 # Since number of data points is huge, 
 # use linear regression model with low tolerance, and saga solver
 # otherwise it takes to months to train. 
-model = LogisticRegression(tol=0.1, solver='saga', n_jobs=4)
+model = LogisticRegression(tol=0.1, solver='saga')
+model = LinearRegression()
 model.fit(train_x, train_y)
+print("Training over")
 
 test['trip_duration'] = model.predict(test_x)
 
